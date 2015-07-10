@@ -1,0 +1,12 @@
+This file includes the contributors to the SFCurve project under LocationTech.  
+
+Project Leads
+  Rob Emanuele <rdemanuele@gmail.com>
+  Jim Hughes   <jnh5y@ccri.com>
+
+Committers 
+  Eugene Cheipesh <echeipesh@gmail.com>
+
+Facebook Open Academy UT-Austin students
+  Mark Sandan <msandan@utexas.edu>
+  Brett Smith <bretts61@gmail.com>

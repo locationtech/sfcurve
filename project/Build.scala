@@ -31,7 +31,7 @@ object Build extends Build {
     super.settings ++ Seq(shellPrompt := { s => Project.extract(s).currentProject.id + " > " })
 
   lazy val root =
-    Project("curve", file("."))
+    Project("sfcurve", file("."))
       .aggregate(core)
 
   lazy val core: Project = 
@@ -40,10 +40,10 @@ object Build extends Build {
 
   lazy val coreSettings =
     Seq(
-      name := "curve",
+      name := "sfcurve",
       organization := "org.locationtech",
-      version := "0.1.0",
-      scalaVersion := "2.11.1",
+      version := "0.1.0-SNAPSHOT",
+      scalaVersion := "2.11.7",
       scalacOptions ++= Seq(
         "-deprecation",
         "-unchecked",
@@ -56,7 +56,8 @@ object Build extends Build {
       libraryDependencies ++= Seq(
         "org.scalatest" %% "scalatest" % "2.2.4" % "test",
         "com.google.uzaygezen" % "uzaygezen-core" % "0.2"
-        )
+        ),
+      publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository")))
     ) ++ defaultAssemblySettings
 
   lazy val benchmarks: Project =
@@ -70,8 +71,8 @@ object Build extends Build {
     Seq(
       name := "benchmarks",
       organization := "org.locationtech",
-      version := "0.1.0",
-      scalaVersion := "2.11.1",
+      version := "0.1.0-SNAPSHOT",
+      scalaVersion := "2.11.7",
       javaOptions += "-Xmx2G",
 
       // enable forking in both run and test

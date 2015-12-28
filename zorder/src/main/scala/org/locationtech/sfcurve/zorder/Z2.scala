@@ -25,6 +25,9 @@ class Z2(val z: Long) extends AnyVal {
 
   def dim(i: Int) = Z2.combine(z >> i)
 
+  def d0 = dim(0)
+  def d1 = dim(1)
+
   def mid(p: Z2): Z2 = {
     var ans: Z2  = new Z2(0)
     if (p.z < z)
@@ -39,7 +42,7 @@ class Z2(val z: Long) extends AnyVal {
 }
 
 object Z2 {  
-  final val MAX_BITS = 31
+  final val MAX_BITS = 15
   final val MAX_MASK = 0x7fffffff // ignore the sign bit, using it breaks < relationship
   final val MAX_DIM = 2
 
@@ -57,12 +60,12 @@ object Z2 {
 
   /** combine every other bit to form a value. Maximum value is 31 bits. */
   def combine(z: Long): Int = {
-    var x = z & 0x5555555555555555L;
-    x = (x ^ (x >>  1)) & 0x3333333333333333L;
-    x = (x ^ (x >>  2)) & 0x0f0f0f0f0f0f0f0fL;
-    x = (x ^ (x >>  4)) & 0x00ff00ff00ff00ffL;
-    x = (x ^ (x >>  8)) & 0x0000ffff0000ffffL;
-    x = (x ^ (x >> 16)) & 0x00000000ffffffffL;       
+    var x = z & 0x5555555555555555L
+    x = (x ^ (x >>  1)) & 0x3333333333333333L
+    x = (x ^ (x >>  2)) & 0x0f0f0f0f0f0f0f0fL
+    x = (x ^ (x >>  4)) & 0x00ff00ff00ff00ffL
+    x = (x ^ (x >>  8)) & 0x0000ffff0000ffffL
+    x = (x ^ (x >> 16)) & 0x00000000ffffffffL
     x.toInt
   }
 
@@ -85,38 +88,61 @@ object Z2 {
     val mask = ~(Z2.split(MAX_MASK >> (MAX_BITS-bits)) << dim)
     val wiped = target & mask
     wiped | (split(p) << dim)
-  }  
+  }
+
+  /**
+    * Calculates the longest common binary prefix between two z longs
+    *
+    * @return (common prefix, number of bits in common)
+    */
+  def longestCommonPrefix(lower: Long, upper: Long): (Long, Int) = {
+    var bitShift = MAX_BITS - MAX_DIM
+    while ((lower >>> bitShift) == (upper >>> bitShift) && bitShift > -1) {
+      bitShift -= MAX_DIM
+    }
+    bitShift += MAX_DIM // increment back to the last valid value
+    (lower & (Long.MaxValue << bitShift), MAX_BITS - bitShift)
+  }
 
   /** Recurse down the quad-tree and report all z-ranges which are contained in the rectangle defined by the min and max points */
-  def zranges(min: Z2, max: Z2): Seq[(Long, Long)] = {
+  def zranges(min: Z2, max: Z2, globalMaxRecurse: Int = 32): Seq[(Long, Long, Boolean)] = {
+    val (commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
+
+    // base our recursion on the depth of the tree that we get 'for free' from the common prefix
+    val maxRecurse = math.min(globalMaxRecurse, if (commonBits < 10) 20 else if (commonBits < 15) 15 else 10)
+
     val mq = new MergeQueue
     val sr = Z2Range(min, max)
 
     var recCounter = 0
     var reportCounter = 0
 
-    def _zranges(prefix: Long, offset: Int, quad: Long): Unit = {      
+    def _zranges(prefix: Int, offset: Int, quad: Int, level: Int): Unit = {
       recCounter += 1
 
-      val min: Long = prefix | (quad << offset) // QR + 000..
-      val max: Long = min | (1L << offset) - 1  // QR + 111..
-      
+      val min: Int = prefix | (quad << offset) // QR + 000..
+      val max: Int = min | (1 << offset) - 1  // QR + 111..
+
+      val nextLevel = level - 1
       val qr = Z2Range(new Z2(min), new Z2(max))
-      if (sr contains qr){                         // whole range matches, happy day
-        mq += (qr.min.z, qr.max.z)
+      if (sr containsInUserSpace qr){                         // whole range matches, happy day
+        mq += (qr.min.z, qr.max.z, true)
         reportCounter +=1
-      } else if (offset > 0 && (sr overlaps qr)) { // some portion of this range are excluded
-        _zranges(min, offset - MAX_DIM, 0)
-        _zranges(min, offset - MAX_DIM, 1)
-        _zranges(min, offset - MAX_DIM, 2)
-        _zranges(min, offset - MAX_DIM, 3)        
-        //let our children punt on each subrange
+      } else if (sr overlapsInUserSpace qr) { // some portion of this range are excluded
+        if(offset > 0 && level > 0) {
+          _zranges(min, offset - MAX_DIM, 0, nextLevel)
+          _zranges(min, offset - MAX_DIM, 1, nextLevel)
+          _zranges(min, offset - MAX_DIM, 2, nextLevel)
+          _zranges(min, offset - MAX_DIM, 3, nextLevel)
+          //let our children punt on each subrange
+        } else {
+          mq += (qr.min.z, qr.max.z, false)
+        }
       }
     }
 
-    var prefix: Long = 0
-    var offset = MAX_BITS*MAX_DIM                
-    _zranges(prefix, offset, 0) // the entire space
+    val offset = MAX_BITS*MAX_DIM - commonBits
+    _zranges(commonPrefix.toInt, offset, 0, maxRecurse) // the entire space
     mq.toSeq
   }
 }

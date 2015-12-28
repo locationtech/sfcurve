@@ -88,7 +88,7 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     (x, y)
   }
 
-  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Seq[(Long, Long)] = {
+  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, maxRecurse: Int = -1 /* not used */): Seq[(Long, Long, Boolean)] = {
     val min = (xmin, ymin)
     val max = (xmax, ymax)
 
@@ -129,15 +129,14 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     var ranges: java.util.List[FilteredIndexRange[LongRange, LongRange]] = query.getFilteredIndexRanges()
 
     //result
-    var result = List[(Long,Long)]()
+    var result = List[(Long,Long, Boolean)]()
     val itr = ranges.iterator
 
-    while(itr.hasNext()) {
-       var l = itr.next()
-       result = (
-                 l.getIndexRange().getStart().asInstanceOf[Long], 
-                 l.getIndexRange().getEnd().asInstanceOf[Long]
-                ) :: result
+    while(itr.hasNext) {
+      val l = itr.next()
+      val start = l.getIndexRange.getStart.asInstanceOf[Long]
+      val end   = l.getIndexRange.getEnd.asInstanceOf[Long]
+      result = (start, end, false) :: result
     }
     result
   }

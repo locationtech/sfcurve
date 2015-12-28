@@ -8,40 +8,33 @@
 
 import sbt._
 import sbt.Keys._
-import sbtassembly.Plugin._
-import AssemblyKeys._
+import sbtassembly.AssemblyPlugin.autoImport._
 
 object Build extends Build {
   val defaultAssemblySettings =
-    assemblySettings ++
-  Seq(
-    test in assembly := {},
-    mergeStrategy in assembly <<= (mergeStrategy in assembly) {
-      (old) => {
-        case "reference.conf" => MergeStrategy.concat
-        case "application.conf" => MergeStrategy.concat
-        case "META-INF/MANIFEST.MF" => MergeStrategy.discard
-        case "META-INF\\MANIFEST.MF" => MergeStrategy.discard
-        case _ => MergeStrategy.first
-      }
-    }
-  )
+      Seq(
+        test in assembly := {},
+        assemblyMergeStrategy in assembly := {
+          case "reference.conf"        => MergeStrategy.concat
+          case "application.conf"      => MergeStrategy.concat
+          case "META-INF/MANIFEST.MF"  => MergeStrategy.discard
+          case "META-INF\\MANIFEST.MF" => MergeStrategy.discard
+          case _                       => MergeStrategy.first
+        }
+      )
 
   override lazy val settings =
     super.settings ++ Seq(shellPrompt := { s => Project.extract(s).currentProject.id + " > " })
 
-  lazy val root =
-    Project("sfcurve", file("."))
-      .aggregate(core)
+  lazy val baseDependencies =
+    Seq("org.scalatest" %% "scalatest" % "2.2.4" % "test")
 
-  lazy val core: Project = 
-    Project("core", file("core"))
-      .settings(coreSettings: _*)
+  lazy val hilbertDependencies =
+    Seq("com.google.uzaygezen" % "uzaygezen-core" % "0.2")
 
   lazy val coreSettings =
     Seq(
-      name := "sfcurve",
-      organization := "org.locationtech",
+      organization := "org.locationtech.sfcurve",
       version := "0.1.0-SNAPSHOT",
       scalaVersion := "2.11.7",
       scalacOptions ++= Seq(
@@ -53,17 +46,33 @@ object Build extends Build {
         "-language:postfixOps",
         "-language:existentials",
         "-feature"),
-      libraryDependencies ++= Seq(
-        "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-        "com.google.uzaygezen" % "uzaygezen-core" % "0.2"
-        ),
       publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository")))
     ) ++ defaultAssemblySettings
+
+  lazy val root =
+    Project("sfcurve", file("."))
+      .aggregate(api, zorder, hilbert)
+      .settings(coreSettings: _*)
+
+  lazy val api: Project =
+    Project("api", file("api"))
+      .settings(coreSettings ++ Seq(libraryDependencies ++= baseDependencies))
+
+  lazy val zorder: Project =
+    Project("zorder", file("zorder"))
+      .settings(coreSettings ++ Seq(libraryDependencies ++= baseDependencies))
+      .dependsOn(api)
+
+  lazy val hilbert: Project =
+    Project("hilbert", file("hilbert"))
+      .settings(coreSettings ++ Seq(libraryDependencies ++= baseDependencies ++ hilbertDependencies))
+      .dependsOn(api)
+
 
   lazy val benchmarks: Project =
     Project("benchmarks", file("benchmarks"))
       .settings(benchmarksSettings: _*)
-      .dependsOn(core)
+      .dependsOn(api, zorder, hilbert)
 
   val benchmarkKey = AttributeKey[Boolean]("javaOptionsPatched")
 
@@ -120,9 +129,9 @@ object Build extends Build {
                   Project
                     .extract(state)
                     .append(
-                    Seq(javaOptions in (benchmarks, run) ++= Seq("-Xmx8G", "-cp", classPath)),
+                      Seq(javaOptions in (benchmarks, run) ++= Seq("-Xmx8G", "-cp", classPath)),
                       state.put(benchmarkKey, true)
-                  )
+                    )
                 case _ => state
               }
             case Some(_) =>

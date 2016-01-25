@@ -46,7 +46,9 @@ object Build extends Build {
         "-language:postfixOps",
         "-language:existentials",
         "-feature"),
-      publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository")))
+      //publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository")))
+      publishTo := Some("Sonatype LocationTech Thirdparty Nexus" at "https://repo.locationtech.org/content/repositories/thirdparty"),
+      publishMavenStyle := true
     ) ++ defaultAssemblySettings
 
   lazy val root =
@@ -55,16 +57,16 @@ object Build extends Build {
       .settings(coreSettings: _*)
 
   lazy val api: Project =
-    Project("api", file("api"))
+    Project("sfcurve-api", file("api"))
       .settings(coreSettings ++ Seq(libraryDependencies ++= baseDependencies))
 
   lazy val zorder: Project =
-    Project("zorder", file("zorder"))
+    Project("sfcurve-zorder", file("zorder"))
       .settings(coreSettings ++ Seq(libraryDependencies ++= baseDependencies))
       .dependsOn(api)
 
   lazy val hilbert: Project =
-    Project("hilbert", file("hilbert"))
+    Project("sfcurve-hilbert", file("hilbert"))
       .settings(coreSettings ++ Seq(libraryDependencies ++= baseDependencies ++ hilbertDependencies))
       .dependsOn(api)
 

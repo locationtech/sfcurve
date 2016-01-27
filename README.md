@@ -29,29 +29,41 @@ To drop into the `sbt` console, where you can execute various commands, simply t
 
 in your shell.
 
-In the below examples `curve >`, `bechmarks >` etc. represents the sbt console prompt.
+In the below examples `>`, `bechmarks >` etc. represents the sbt console prompt.
 
 Once in the `sbt` console, to compile the code, issue the command:
 
 ```
-curve > compile
+> compile
 ```
 
 To test the code:
 
 ```
-curve > test
+> test
 ```
 
 To start a scala console which has the core sfcurve code in the classpath:
 
 ```
-curve > console
+> console
 ```
 
 To run the benchmarks, drop into the benchmark subproject using the `project` command, and run:
 
 ```
-curve > project benchmarks
+> project benchmarks
 benchmarks > run
 ```
+
+### Publishing snapshot binaries
+
+If you run the `publish-local` sbt command, the subproject artifacts will be published to the local `ivy2` cache.
+
+If you run the `publish` sbt command, the subproject artifacts will be published to the local maven2 repository.
+
+This will publish artifacts for the latest scala version. If you want other scala versions, you can add a `+` in front of the command to do cross-version commands. So `+publish-local` will publish scala 2.10 and 2.11 artifacts to the local ivy2 cache.
+
+### Showing the dependency graph
+
+Run `dependencyGraph` in the subproject sbt console.

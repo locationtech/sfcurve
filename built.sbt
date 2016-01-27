@@ -22,13 +22,6 @@ lazy val commonSettings = Seq(
   publishArtifact in Test := false,
   pomIncludeRepository := { _ => false },
 
-  // bintrayOrganization := Some("azavea"),
-  // bintrayRepository := "geotrellis",
-  // bintrayVcsUrl := Some("https://github.com/geotrellis/geotrellis.git"),
-  // bintrayPackageLabels := Info.tags,
-
-  // addCompilerPlugin("org.spire-math" % "kind-projector" % "0.7.1" cross CrossVersion.binary),
-
   pomExtra := (
     <scm>
       <url>https://github.com/locationtech/sfcurve</url>
@@ -52,6 +45,7 @@ lazy val commonSettings = Seq(
 lazy val root =
   Project("sfcurve", file("."))
     .aggregate(api, zorder, hilbert)
+    .settings(commonSettings: _*)
 
 lazy val api: Project =
   Project("api", file("api"))

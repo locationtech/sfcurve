@@ -12,6 +12,9 @@ build/*.jar
 **/.settings
 target
 **/src/main/resources/git.properties
+\#*#
+*~
+.#*
 
 project/boot
 project/plugins/project

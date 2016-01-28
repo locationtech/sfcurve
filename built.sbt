@@ -18,6 +18,7 @@ lazy val commonSettings = Seq(
     "-language:existentials",
     "-feature"),
   publishTo := Some("Sonatype LocationTech Thirdparty Nexus" at "https://repo.locationtech.org/content/repositories/thirdparty"),
+  credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   //publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository"))),
   publishMavenStyle := true,
   publishArtifact in Test := false,

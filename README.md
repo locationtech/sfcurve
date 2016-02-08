@@ -1,5 +1,7 @@
-SFCurve
+SreleasesFCurve
 =====
+
+[![Join the chat at https://gitter.im/locationtech/sfcurve](https://badges.gitter.im/locationtech/sfcurve.svg)](https://gitter.im/locationtech/sfcurve?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ![sfcurve-space-diagram](https://cloud.githubusercontent.com/assets/2320142/6543539/449db6e2-c4ed-11e4-865a-584e056b5469.png)
 

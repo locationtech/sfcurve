@@ -30,8 +30,8 @@ class HilbertCurveSpec extends FunSpec with Matchers {
       val sfc = new HilbertCurve2D(resolution)
       val index: Long = sfc.toIndex(0.0, 0.0)
 
-      val xEpsilon = (360.0 / gridCells)
-      val yEpsilon = (180.0 / gridCells)
+      val xEpsilon = 360.0 / gridCells
+      val yEpsilon = 180.0 / gridCells
 
       val point = sfc.toPoint(index)
 
@@ -45,6 +45,10 @@ class HilbertCurveSpec extends FunSpec with Matchers {
       val range = sfc.toRanges(-178.123456, -86.398493, 179.3211113, 87.393483)
 
       range should have length 3
+
+      // the last range is not wholly contained within the query region
+      val (_, _, lastcontains) = range(2).tuple
+      lastcontains should be(false)
     }
 
     it("Takes a Long value to a Point (Double, Double)"){

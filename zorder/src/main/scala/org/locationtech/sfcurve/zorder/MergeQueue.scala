@@ -8,8 +8,10 @@
 
 package org.locationtech.sfcurve.zorder
 
+import org.locationtech.sfcurve.IndexRange
+
 class MergeQueue(initialSize: Int = 1) {
-  private var array = if(initialSize <= 1) { Array.ofDim[(Long, Long)](1) } else { Array.ofDim[(Long, Long)](initialSize) }
+  private var array = if(initialSize <= 1) { Array.ofDim[IndexRange](1) } else { Array.ofDim[IndexRange](initialSize) }
   private var _size = 0
  
   def size = _size
@@ -23,7 +25,7 @@ class MergeQueue(initialSize: Int = 1) {
     _size = _size - 1
   }
  
-  private def insertElement(range: (Long, Long), i: Int): Unit = {
+  private def insertElement(range: IndexRange, i: Int): Unit = {
     ensureSize(_size + 1)
     if(i == _size) {
       array(i) = range
@@ -50,36 +52,37 @@ class MergeQueue(initialSize: Int = 1) {
       // Clamp newSize to Int.MaxValue
       if (newSize > Int.MaxValue) newSize = Int.MaxValue
  
-      val newArray: Array[(Long, Long)] = new Array(newSize.toInt)
+      val newArray: Array[IndexRange] = new Array(newSize.toInt)
       scala.compat.Platform.arraycopy(array, 0, newArray, 0, _size)
       array = newArray
     }
   }
- 
-  val ordering = implicitly[Ordering[(Long, Long)]]
+
+  val ordering = IndexRange.IndexRangeIsOrdered
  
   /** Inserts a single range into the priority queue.
    *
    *  @param  range        the element to insert.
    */
-  @annotation.tailrec
-  final def +=(range: (Long, Long)): Unit = {
+  final def +=(range: IndexRange): Unit = {
     val res = if(_size == 0) { -1 } else { java.util.Arrays.binarySearch(array, 0, _size, range, ordering) }
     if(res < 0) {
       val i = -(res + 1)
-      var (thisStart, thisEnd) = range
+      var (thisStart, thisEnd, contained) = range.tuple
       var removeLeft = false
  
       var removeRight = false
-      var rightRemainder: Option[(Long, Long)] = None
+      var rightRemainder: Option[IndexRange] = None
  
       // Look at the left range
       if(i != 0) {
-        val (prevStart, prevEnd) = array(i - 1)
+        val (prevStart, prevEnd, b) = array(i - 1).tuple
         if(prevStart == thisStart) {
+          contained = contained && b
           removeLeft = true
         }
-        if (prevEnd + 1 >= thisStart) { 
+        if (prevEnd + 1 >= thisStart) {
+          contained = contained && b
           removeLeft = true
           thisStart = prevStart
           if(prevEnd > thisEnd) {
@@ -90,17 +93,19 @@ class MergeQueue(initialSize: Int = 1) {
  
       // Look at the right range
       if(i < _size  && _size > 0) {
-        val (nextStart, nextEnd) = array(i)
+        val (nextStart, nextEnd, b) = array(i).tuple
         if(thisStart == nextStart) {
           removeRight = true
           thisEnd = nextEnd
+          contained = contained && b
         } else {
           if(thisEnd + 1 >= nextStart) {
             removeRight = true
+            contained = contained && b
             if(nextEnd - 1 >= thisEnd) {
               thisEnd = nextEnd
             } else if (nextEnd < thisEnd - 1) {
-              rightRemainder = Some((nextEnd + 1, thisEnd))
+              rightRemainder = Some(IndexRange(nextEnd + 1, thisEnd, contained && b))
               thisEnd = nextEnd
             }
           }
@@ -109,13 +114,13 @@ class MergeQueue(initialSize: Int = 1) {
  
       if(removeRight) { 
         if(!removeLeft) {
-          array(i) = (thisStart, thisEnd)
+          array(i) = IndexRange(thisStart, thisEnd, contained)
         } else {
-          array(i-1) = (thisStart, thisEnd)
+          array(i-1) = IndexRange(thisStart, thisEnd, contained)
           removeElement(i)
         }
       } else if(removeLeft) {
-        array(i-1) = (thisStart, thisEnd)
+        array(i-1) = IndexRange(thisStart, thisEnd, contained)
       } else {
         insertElement(range, i)
       }
@@ -127,8 +132,8 @@ class MergeQueue(initialSize: Int = 1) {
     }
   }
  
-  def toSeq: Seq[(Long, Long)] = {
-    val result = Array.ofDim[(Long, Long)](size)
+  def toSeq: Seq[IndexRange] = {
+    val result = Array.ofDim[IndexRange](size)
     System.arraycopy(array, 0, result, 0, size)
     result
   }

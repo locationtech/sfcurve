@@ -10,6 +10,8 @@ package org.locationtech.sfcurve.zorder
 
 import org.locationtech.sfcurve._
 
+import scala.util.Try
+
 /** Represents a 2D Z order curve that we will use for benchmarking purposes in the early stages.
   *
   * @param    resolution     The number of cells in each dimension of the grid space that will be indexed.
@@ -25,16 +27,16 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
   val cellwidth = (xmax - xmin) / resolution
   val cellheight = (ymax - ymin) / resolution
 
-  private final def mapToCol(x: Double) =
+  def mapToCol(x: Double) =
     ((x - xmin) / cellwidth).toInt
 
-  private final def mapToRow(y: Double) =
+  def mapToRow(y: Double) =
     ((ymax - y) / cellheight).toInt
 
-  private final def colToMap(col: Int) =
+  def colToMap(col: Int) =
     math.max(math.min(col * cellwidth + xmin + (cellwidth / 2), xmax), xmin)
 
-  private final def rowToMap(row: Int) =
+  def rowToMap(row: Int) =
     math.min(math.max(ymax - (row * cellheight) - (cellheight / 2), ymin), ymax)
 
 
@@ -49,17 +51,46 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     (colToMap(col), rowToMap(row))
   }
 
-  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Seq[(Long, Long)] = {
+  def bound(i: Long): (Double, Double, Double, Double) = {
+    val (col, row) = new Z2(i).decode
+    val x = colToMap(col)
+    val y = rowToMap(row)
+    (validateX(x - cellwidth), validateY(y-cellheight), validateX(x+cellwidth), validateY(y+cellheight))
+  }
+
+  def validateX(x: Double) = math.min(math.max(xmin, x), xmax)
+  def validateY(y: Double) = math.min(math.max(ymin, y), ymax)
+
+  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[IndexRange] = {
+    import ZCurve2D.DEFAULT_MAX_RECURSION
+
+    import scala.collection.JavaConverters._
     val colMin = mapToCol(xmin)
     val rowMin = mapToRow(ymax)
-    println("Input: " + xmin + " ymin: " + ymin + " xmax: " + xmax + " ymax: " + ymax)
-    val min = Z2(rowMin, colMin)
-    println("minmapToCol: " + colMin + " minmapToRow: " + rowMin + " z: " + min.z)
+    val min = Z2(colMin, rowMin)
     val colMax = mapToCol(xmax)
     val rowMax = mapToRow(ymin)
-    val max = Z2(rowMin, colMin)
-    println("maxmapToCol: " + colMax + " maxmapToRow: " + rowMax + " z: " + max.z)
+    val max = Z2(colMax, rowMax)
 
-    Z2.zranges(min, max)
+    val maxRecurse =
+      hints.map { h =>
+        h.asScala
+          .get(ZCurve2D.MAX_RECURSE)
+          .map { l => Try(l.asInstanceOf[Int]).getOrElse(DEFAULT_MAX_RECURSION) }
+          .getOrElse(DEFAULT_MAX_RECURSION)
+      }.getOrElse(DEFAULT_MAX_RECURSION)
+
+    Z2.zranges(min, max, maxRecurse)
+  }
+}
+
+object ZCurve2D {
+  val DEFAULT_MAX_RECURSION = 10
+  val MAX_RECURSE = "zorder.max.recurse"
+
+  def hints(maxRecurse: Int) = {
+    val hints = new RangeComputeHints()
+    hints.put(MAX_RECURSE, Int.box(maxRecurse))
+    Some(hints)
   }
 }

@@ -36,7 +36,24 @@ case class Z2Range(min: Z2, max: Z2){
     _overlaps(min.dim(0), max.dim(0), r.min.dim(0), r.max.dim(0)) &&
     _overlaps(min.dim(1), max.dim(1), r.min.dim(1), r.max.dim(1))
   }
-  
+
+  // contains in user space - each dimension is contained
+  def containsInUserSpace(bits: Z2) = {
+    val (x, y) = bits.decode
+    x >= min.d0 && x <= max.d0 && y >= min.d1 && y <= max.d1
+  }
+
+  // contains in user space - each dimension is contained
+  def containsInUserSpace(r: Z2Range): Boolean = containsInUserSpace(r.min) && containsInUserSpace(r.max)
+
+  // overlap in user space - if any dimension overlaps
+  def overlapsInUserSpace(r: Z2Range): Boolean =
+    overlaps(min.d0, max.d0, r.min.d0, r.max.d0) &&
+      overlaps(min.d1, max.d1, r.min.d1, r.max.d1)
+
+  private def overlaps(a1: Int, a2: Int, b1: Int, b2: Int) = math.max(a1, b1) <= math.min(a2, b2)
+
+
   /** 
    * Cuts Z-Range in two, can be used to perform augmented binary search
    * @param xd: division point

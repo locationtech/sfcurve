@@ -88,12 +88,9 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     (x, y)
   }
 
-  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Seq[(Long, Long)] = {
-    val min = (xmin, ymin)
-    val max = (xmax, ymax)
-
-    var chc = new CompactHilbertCurve( Array[Int](resolution,resolution) )
-    var region = new java.util.ArrayList[LongRange]()
+  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[IndexRange] = {
+    val chc = new CompactHilbertCurve(Array[Int](resolution, resolution))
+    val region = new java.util.ArrayList[LongRange]()
 
     val minNormalizedLongitude = getNormalizedLongitude(xmin)
     val minNormalizedLatitude  = getNormalizedLatitude(ymin) 
@@ -103,41 +100,41 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
 
     region.add(LongRange.of(minNormalizedLongitude,maxNormalizedLongitude))
     region.add(LongRange.of(minNormalizedLatitude,maxNormalizedLatitude))
-  
-    var zero = new LongContent(0L)
-    var LongRangeIDFunction: Function[LongRange, LongRange] = Functions.identity()
 
-    var inspector: RegionInspector[LongRange, LongContent] = 
-     SimpleRegionInspector.create(
+    val zero = new LongContent(0L)
+    val LongRangeIDFunction: Function[LongRange, LongRange] = Functions.identity()
 
-            ImmutableList.of(region), 
-            new LongContent(1L), 
-            LongRangeIDFunction, 
-            LongRangeHome.INSTANCE, 
-            zero
-     )
+    val inspector =
+      SimpleRegionInspector.create(
+        ImmutableList.of(region),
+        new LongContent(1L),
+        LongRangeIDFunction,
+        LongRangeHome.INSTANCE,
+        zero
+      )
 
-    var combiner = 
+    val combiner =
       new PlainFilterCombiner[LongRange, java.lang.Long, LongContent, LongRange](LongRange.of(0, 1))
 
-    var queryBuilder: QueryBuilder[LongRange, LongRange] = BacktrackingQueryBuilder.create(inspector, combiner, Int.MaxValue, true, LongRangeHome.INSTANCE, zero)
+    val queryBuilder = BacktrackingQueryBuilder.create(inspector, combiner, Int.MaxValue, true, LongRangeHome.INSTANCE, zero)
 
     chc.accept(new ZoomingSpaceVisitorAdapter(chc, queryBuilder))
 
-    var query: Query[LongRange, LongRange] = queryBuilder.get()
+    val query = queryBuilder.get()
 
-    var ranges: java.util.List[FilteredIndexRange[LongRange, LongRange]] = query.getFilteredIndexRanges()
+    val ranges = query.getFilteredIndexRanges
 
     //result
-    var result = List[(Long,Long)]()
+    var result = List[IndexRange]()
     val itr = ranges.iterator
 
-    while(itr.hasNext()) {
-       var l = itr.next()
-       result = (
-                 l.getIndexRange().getStart().asInstanceOf[Long], 
-                 l.getIndexRange().getEnd().asInstanceOf[Long]
-                ) :: result
+    while(itr.hasNext) {
+      val l = itr.next()
+      val range = l.getIndexRange
+      val start = range.getStart.asInstanceOf[Long]
+      val end   = range.getEnd.asInstanceOf[Long]
+      val contained = l.isPotentialOverSelectivity
+      result = IndexRange(start, end, contained) :: result
     }
     result
   }

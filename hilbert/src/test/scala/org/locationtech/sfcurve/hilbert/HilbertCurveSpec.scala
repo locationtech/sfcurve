@@ -46,7 +46,7 @@ class HilbertCurveSpec extends FunSpec with Matchers {
 
       range should have length 3
 
-      // the last range is not wh
+      // the last range is not wholly contained within the query region
       val (_, _, lastcontains) = range(2).tuple
       lastcontains should be(false)
     }

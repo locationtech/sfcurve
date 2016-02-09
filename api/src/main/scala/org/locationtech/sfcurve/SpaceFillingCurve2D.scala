@@ -10,7 +10,7 @@ package org.locationtech.sfcurve
 
 class RangeComputeHints extends java.util.HashMap[String, AnyRef]
 
-trait IndexRange {
+sealed trait IndexRange {
   def lower: Long
   def upper: Long
   def contained: Boolean

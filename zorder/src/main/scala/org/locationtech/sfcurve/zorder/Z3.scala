@@ -7,6 +7,8 @@
 *************************************************************************/
 package org.locationtech.sfcurve.zorder
 
+import org.locationtech.sfcurve.IndexRange
+
 class Z3(val z: Long) extends AnyVal {
   import Z3._
 
@@ -108,7 +110,7 @@ object Z3 {
    * Recurse down the oct-tree and report all z-ranges which are contained
    * in the cube defined by the min and max points
    */
-  def zranges(min: Z3, max: Z3): Seq[(Long, Long, Boolean)] = {
+  def zranges(min: Z3, max: Z3): Seq[IndexRange] = {
     val (commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
@@ -124,7 +126,7 @@ object Z3 {
 
       if (searchRange containsInUserSpace octRange) {
         // whole range matches, happy day
-        mq += (octRange.min.z, octRange.max.z, true)
+        mq += IndexRange(octRange.min.z, octRange.max.z, contained = true)
       } else if (searchRange overlapsInUserSpace octRange) {
         if (level < maxRecurse && offset > 0) {
           // some portion of this range is excluded
@@ -141,7 +143,7 @@ object Z3 {
           zranges(min, nextOffset, 7, nextLevel)
         } else {
           // bottom out - add the entire range so we don't miss anything
-          mq += (octRange.min.z, octRange.max.z, false)
+          mq += IndexRange(octRange.min.z, octRange.max.z, false)
         }
       }
     }

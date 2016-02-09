@@ -61,7 +61,7 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
   def validateX(x: Double) = math.min(math.max(xmin, x), xmax)
   def validateY(y: Double) = math.min(math.max(ymin, y), ymax)
 
-  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[(Long, Long, Boolean)] = {
+  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[IndexRange] = {
     import ZCurve2D.DEFAULT_MAX_RECURSION
 
     import scala.collection.JavaConverters._

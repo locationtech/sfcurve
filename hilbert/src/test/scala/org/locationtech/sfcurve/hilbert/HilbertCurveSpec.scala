@@ -30,8 +30,8 @@ class HilbertCurveSpec extends FunSpec with Matchers {
       val sfc = new HilbertCurve2D(resolution)
       val index: Long = sfc.toIndex(0.0, 0.0)
 
-      val xEpsilon = (360.0 / gridCells)
-      val yEpsilon = (180.0 / gridCells)
+      val xEpsilon = 360.0 / gridCells
+      val yEpsilon = 180.0 / gridCells
 
       val point = sfc.toPoint(index)
 
@@ -47,7 +47,7 @@ class HilbertCurveSpec extends FunSpec with Matchers {
       range should have length 3
 
       // the last range is not wh
-      val (_, _, lastcontains) = range(2)
+      val (_, _, lastcontains) = range(2).tuple
       lastcontains should be(false)
     }
 

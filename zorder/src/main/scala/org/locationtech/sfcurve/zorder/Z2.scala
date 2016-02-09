@@ -8,6 +8,8 @@
 
 package org.locationtech.sfcurve.zorder
 
+import org.locationtech.sfcurve.IndexRange
+
 class Z2(val z: Long) extends AnyVal {
   import Z2._
 
@@ -105,7 +107,7 @@ object Z2 {
   }
 
   /** Recurse down the quad-tree and report all z-ranges which are contained in the rectangle defined by the min and max points */
-  def zranges(min: Z2, max: Z2, globalMaxRecurse: Int = 32): Seq[(Long, Long, Boolean)] = {
+  def zranges(min: Z2, max: Z2, globalMaxRecurse: Int = 32): Seq[IndexRange] = {
     val (commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
@@ -126,7 +128,7 @@ object Z2 {
       val nextLevel = level - 1
       val qr = Z2Range(new Z2(min), new Z2(max))
       if (sr containsInUserSpace qr){                         // whole range matches, happy day
-        mq += (qr.min.z, qr.max.z, true)
+        mq += IndexRange(qr.min.z, qr.max.z, contained = true)
         reportCounter +=1
       } else if (sr overlapsInUserSpace qr) { // some portion of this range are excluded
         if(offset > 0 && level > 0) {
@@ -136,7 +138,7 @@ object Z2 {
           _zranges(min, offset - MAX_DIM, 3, nextLevel)
           //let our children punt on each subrange
         } else {
-          mq += (qr.min.z, qr.max.z, false)
+          mq += IndexRange(qr.min.z, qr.max.z, contained = false)
         }
       }
     }

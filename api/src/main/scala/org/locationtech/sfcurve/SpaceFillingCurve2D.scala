@@ -36,11 +36,11 @@ object IndexRange {
     }
   }
 
+  implicit object IndexRangeIsOrdered extends IndexRangeOrdering
+
   def apply(l: Long, u: Long, contained: Boolean): IndexRange =
     if(contained) CoveredRange(l, u)
     else          OverlappingRange(l, u)
-
-  implicit object IndexRangeIsOrdered extends IndexRangeOrdering
 }
 
 trait SpaceFillingCurve2D {

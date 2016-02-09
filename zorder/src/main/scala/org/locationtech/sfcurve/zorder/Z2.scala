@@ -44,7 +44,7 @@ class Z2(val z: Long) extends AnyVal {
 }
 
 object Z2 {  
-  final val MAX_BITS = 15
+  final val MAX_BITS = 31
   final val MAX_MASK = 0x7fffffff // ignore the sign bit, using it breaks < relationship
   final val MAX_DIM = 2
 

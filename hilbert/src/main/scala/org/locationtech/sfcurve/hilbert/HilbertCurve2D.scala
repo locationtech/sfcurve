@@ -88,7 +88,7 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     (x, y)
   }
 
-  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, maxRecurse: Int = -1 /* not used */): Seq[(Long, Long, Boolean)] = {
+  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[(Long, Long, Boolean)] = {
     val chc = new CompactHilbertCurve(Array[Int](resolution, resolution))
     val region = new java.util.ArrayList[LongRange]()
 
@@ -133,9 +133,7 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
       val range = l.getIndexRange
       val start = range.getStart.asInstanceOf[Long]
       val end   = range.getEnd.asInstanceOf[Long]
-      val (rlx, rly) = toPoint(start)
-      val (rux, ruy) = toPoint(end)
-      val contained = rlx >= xmin && rux <= xmax && rly >= ymin && ruy <= ymax
+      val contained = l.isPotentialOverSelectivity
       result = (start, end, contained) :: result
     }
     result

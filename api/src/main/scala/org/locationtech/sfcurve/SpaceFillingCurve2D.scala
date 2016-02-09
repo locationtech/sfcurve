@@ -8,8 +8,10 @@
 
 package org.locationtech.sfcurve
 
+class RangeComputeHints extends java.util.HashMap[String, AnyRef]
+
 trait SpaceFillingCurve2D {
   def toIndex(x: Double, y: Double): Long
   def toPoint(i: Long): (Double, Double)
-  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, maxRecurse: Int): Seq[(Long, Long, Boolean)]
+  def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[(Long, Long, Boolean)]
 }

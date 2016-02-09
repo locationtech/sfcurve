@@ -45,6 +45,10 @@ class HilbertCurveSpec extends FunSpec with Matchers {
       val range = sfc.toRanges(-178.123456, -86.398493, 179.3211113, 87.393483)
 
       range should have length 3
+
+      // the last range is not wh
+      val (_, _, lastcontains) = range(2)
+      lastcontains should be(false)
     }
 
     it("Takes a Long value to a Point (Double, Double)"){

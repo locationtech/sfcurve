@@ -89,11 +89,8 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
   }
 
   def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, maxRecurse: Int = -1 /* not used */): Seq[(Long, Long, Boolean)] = {
-    val min = (xmin, ymin)
-    val max = (xmax, ymax)
-
-    var chc = new CompactHilbertCurve( Array[Int](resolution,resolution) )
-    var region = new java.util.ArrayList[LongRange]()
+    val chc = new CompactHilbertCurve(Array[Int](resolution, resolution))
+    val region = new java.util.ArrayList[LongRange]()
 
     val minNormalizedLongitude = getNormalizedLongitude(xmin)
     val minNormalizedLatitude  = getNormalizedLatitude(ymin) 
@@ -103,30 +100,29 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
 
     region.add(LongRange.of(minNormalizedLongitude,maxNormalizedLongitude))
     region.add(LongRange.of(minNormalizedLatitude,maxNormalizedLatitude))
-  
-    var zero = new LongContent(0L)
-    var LongRangeIDFunction: Function[LongRange, LongRange] = Functions.identity()
 
-    var inspector: RegionInspector[LongRange, LongContent] = 
-     SimpleRegionInspector.create(
+    val zero = new LongContent(0L)
+    val LongRangeIDFunction: Function[LongRange, LongRange] = Functions.identity()
 
-            ImmutableList.of(region), 
-            new LongContent(1L), 
-            LongRangeIDFunction, 
-            LongRangeHome.INSTANCE, 
-            zero
-     )
+    val inspector =
+      SimpleRegionInspector.create(
+        ImmutableList.of(region),
+        new LongContent(1L),
+        LongRangeIDFunction,
+        LongRangeHome.INSTANCE,
+        zero
+      )
 
-    var combiner = 
+    val combiner =
       new PlainFilterCombiner[LongRange, java.lang.Long, LongContent, LongRange](LongRange.of(0, 1))
 
-    var queryBuilder: QueryBuilder[LongRange, LongRange] = BacktrackingQueryBuilder.create(inspector, combiner, Int.MaxValue, true, LongRangeHome.INSTANCE, zero)
+    val queryBuilder = BacktrackingQueryBuilder.create(inspector, combiner, Int.MaxValue, true, LongRangeHome.INSTANCE, zero)
 
     chc.accept(new ZoomingSpaceVisitorAdapter(chc, queryBuilder))
 
-    var query: Query[LongRange, LongRange] = queryBuilder.get()
+    val query = queryBuilder.get()
 
-    var ranges: java.util.List[FilteredIndexRange[LongRange, LongRange]] = query.getFilteredIndexRanges()
+    val ranges = query.getFilteredIndexRanges
 
     //result
     var result = List[(Long,Long, Boolean)]()
@@ -134,9 +130,13 @@ class HilbertCurve2D(resolution: Int) extends SpaceFillingCurve2D {
 
     while(itr.hasNext) {
       val l = itr.next()
-      val start = l.getIndexRange.getStart.asInstanceOf[Long]
-      val end   = l.getIndexRange.getEnd.asInstanceOf[Long]
-      result = (start, end, false) :: result
+      val range = l.getIndexRange
+      val start = range.getStart.asInstanceOf[Long]
+      val end   = range.getEnd.asInstanceOf[Long]
+      val (rlx, rly) = toPoint(start)
+      val (rux, ruy) = toPoint(end)
+      val contained = rlx >= xmin && rux <= xmax && rly >= ymin && ruy <= ymax
+      result = (start, end, contained) :: result
     }
     result
   }

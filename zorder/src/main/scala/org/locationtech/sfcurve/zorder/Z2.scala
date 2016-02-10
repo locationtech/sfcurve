@@ -111,7 +111,7 @@ object Z2 {
     val (commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-    val maxRecurse = math.min(globalMaxRecurse, if (commonBits < 10) 20 else if (commonBits < 15) 15 else 10)
+    val maxRecurse = globalMaxRecurse
 
     val mq = new MergeQueue
     val sr = Z2Range(min, max)
@@ -119,11 +119,11 @@ object Z2 {
     var recCounter = 0
     var reportCounter = 0
 
-    def _zranges(prefix: Int, offset: Int, quad: Int, level: Int): Unit = {
+    def _zranges(prefix: Long, offset: Int, quad: Long, level: Int): Unit = {
       recCounter += 1
 
-      val min: Int = prefix | (quad << offset) // QR + 000..
-      val max: Int = min | (1 << offset) - 1  // QR + 111..
+      val min = prefix | (quad << offset) // QR + 000..
+      val max = min | (1L << offset) - 1  // QR + 111..
 
       val nextLevel = level - 1
       val qr = Z2Range(new Z2(min), new Z2(max))
@@ -144,7 +144,7 @@ object Z2 {
     }
 
     val offset = MAX_BITS*MAX_DIM - commonBits
-    _zranges(commonPrefix.toInt, offset, 0, maxRecurse) // the entire space
+    _zranges(commonPrefix, offset, 0, maxRecurse) // the entire space
     mq.toSeq
   }
 }

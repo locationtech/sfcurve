@@ -85,7 +85,7 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
 }
 
 object ZCurve2D {
-  val DEFAULT_MAX_RECURSION = 10
+  val DEFAULT_MAX_RECURSION = 32
   val MAX_RECURSE = "zorder.max.recurse"
 
   def hints(maxRecurse: Int) = {

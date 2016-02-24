@@ -110,8 +110,8 @@ object Z3 {
    * Recurse down the oct-tree and report all z-ranges which are contained
    * in the cube defined by the min and max points
    */
-  def zranges(min: Z3, max: Z3): Seq[IndexRange] = {
-    val (commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
+  def zranges(min: Z3, max: Z3, precision: Int = 64): Seq[IndexRange] = {
+    val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
     val maxRecurse = if (commonBits < 30) 7 else if (commonBits < 40) 6 else 5
@@ -124,7 +124,7 @@ object Z3 {
       val max: Long = min | (1L << offset) - 1 // QR + 111...
       val octRange = Z3Range(new Z3(min), new Z3(max))
 
-      if (searchRange containsInUserSpace octRange) {
+      if (searchRange.containsInUserSpace(octRange) || offset < 64 - precision) {
         // whole range matches, happy day
         mq += IndexRange(octRange.min.z, octRange.max.z, contained = true)
       } else if (searchRange overlapsInUserSpace octRange) {
@@ -143,13 +143,13 @@ object Z3 {
           zranges(min, nextOffset, 7, nextLevel)
         } else {
           // bottom out - add the entire range so we don't miss anything
-          mq += IndexRange(octRange.min.z, octRange.max.z, false)
+          mq += IndexRange(octRange.min.z, octRange.max.z, contained = false)
         }
       }
     }
 
     // kick off recursion over the narrowed space
-    zranges(commonPrefix, TOTAL_BITS - commonBits, 0, 0)
+    zranges(commonPrefix, 64 - commonBits, 0, 0)
 
     // return our aggregated results
     mq.toSeq
@@ -160,13 +160,13 @@ object Z3 {
    *
    * @return (common prefix, number of bits in common)
    */
-  def longestCommonPrefix(lower: Long, upper: Long): (Long, Int) = {
+  def longestCommonPrefix(lower: Long, upper: Long): ZPrefix = {
     var bitShift = TOTAL_BITS - MAX_DIM
     while ((lower >>> bitShift) == (upper >>> bitShift) && bitShift > -1) {
       bitShift -= MAX_DIM
     }
     bitShift += MAX_DIM // increment back to the last valid value
-    (lower & (Long.MaxValue << bitShift), TOTAL_BITS - bitShift)
+    ZPrefix(lower & (Long.MaxValue << bitShift), 64 - bitShift)
   }
 
   /**
@@ -254,4 +254,6 @@ object Z3 {
       Z3Range(r.min, litmax) :: Z3Range(bigmin, r.max) :: Nil
     }
   }
+
+  case class ZPrefix(prefix: Long, precision: Int) // precision in bits
 }

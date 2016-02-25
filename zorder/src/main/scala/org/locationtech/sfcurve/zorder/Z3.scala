@@ -109,6 +109,12 @@ object Z3 {
   /**
    * Recurse down the oct-tree and report all z-ranges which are contained
    * in the cube defined by the min and max points
+   *
+   * @param min lower bound
+   * @param max upper bound
+   * @param precision bit precision of the z-values. can be used to stop searching after
+   *                  considering a certain number of bits.
+   * @return
    */
   def zranges(min: Z3, max: Z3, precision: Int = 64): Seq[IndexRange] = {
     val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)

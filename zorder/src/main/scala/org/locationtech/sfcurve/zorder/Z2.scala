@@ -9,6 +9,7 @@
 package org.locationtech.sfcurve.zorder
 
 import org.locationtech.sfcurve.IndexRange
+import org.locationtech.sfcurve.zorder.Z3.ZPrefix
 
 class Z2(val z: Long) extends AnyVal {
   import Z2._
@@ -47,8 +48,9 @@ object Z2 {
   final val MAX_BITS = 31
   final val MAX_MASK = 0x7fffffff // ignore the sign bit, using it breaks < relationship
   final val MAX_DIM = 2
+  final val TOTAL_BITS = MAX_BITS * MAX_DIM
 
-  /** insert 0 between every bit in value. Only first 31 bits can be considred. */
+  /** insert 0 between every bit in value. Only first 31 bits can be considered. */
   def split(value: Long): Long = {
     var x: Long = value & MAX_MASK  
     x = (x ^ (x << 32)) & 0x00000000ffffffffL
@@ -70,6 +72,8 @@ object Z2 {
     x = (x ^ (x >> 16)) & 0x00000000ffffffffL
     x.toInt
   }
+
+  def apply(zvalue: Long): Z2 = new Z2(zvalue)
 
   /**
    * Bits of x and y will be encoded as ....y1x1y0x0
@@ -97,54 +101,63 @@ object Z2 {
     *
     * @return (common prefix, number of bits in common)
     */
-  def longestCommonPrefix(lower: Long, upper: Long): (Long, Int) = {
-    var bitShift = MAX_BITS - MAX_DIM
+  def longestCommonPrefix(lower: Long, upper: Long): ZPrefix = {
+    var bitShift = TOTAL_BITS - MAX_DIM
     while ((lower >>> bitShift) == (upper >>> bitShift) && bitShift > -1) {
       bitShift -= MAX_DIM
     }
     bitShift += MAX_DIM // increment back to the last valid value
-    (lower & (Long.MaxValue << bitShift), MAX_BITS - bitShift)
+    ZPrefix(lower & (Long.MaxValue << bitShift), 64 - bitShift)
   }
 
-  /** Recurse down the quad-tree and report all z-ranges which are contained in the rectangle defined by the min and max points */
-  def zranges(min: Z2, max: Z2, globalMaxRecurse: Int = 32): Seq[IndexRange] = {
-    val (commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
+  /**
+    * Recurse down the quad-tree and report all z-ranges which are contained
+    * in the cube defined by the min and max points
+    *
+    * @param min lower bound
+    * @param max upper bound
+    * @param precision bit precision of the z-values. can be used to stop searching after
+    *                  considering a certain number of bits.
+    * @return
+    */
+  def zranges(min: Z2, max: Z2, precision: Int = 64): Seq[IndexRange] = {
+    val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-    val maxRecurse = globalMaxRecurse
+    val maxRecurse = if (commonBits < 30) 10 else if (commonBits < 40) 9 else 7
 
-    val mq = new MergeQueue
-    val sr = Z2Range(min, max)
+    val searchRange = Z2Range(min, max)
+    val mq = new MergeQueue // stores our results
 
-    var recCounter = 0
-    var reportCounter = 0
+    def zranges(prefix: Long, offset: Int, quad: Long, level: Int): Unit = {
+      val min: Long = prefix | (quad << offset) // QR + 000..
+      val max: Long = min | (1L << offset) - 1  // QR + 111..
+      val quadRange = Z2Range(new Z2(min), new Z2(max))
 
-    def _zranges(prefix: Long, offset: Int, quad: Long, level: Int): Unit = {
-      recCounter += 1
-
-      val min = prefix | (quad << offset) // QR + 000..
-      val max = min | (1L << offset) - 1  // QR + 111..
-
-      val nextLevel = level - 1
-      val qr = Z2Range(new Z2(min), new Z2(max))
-      if (sr containsInUserSpace qr){                         // whole range matches, happy day
-        mq += IndexRange(qr.min.z, qr.max.z, contained = true)
-        reportCounter +=1
-      } else if (sr overlapsInUserSpace qr) { // some portion of this range are excluded
-        if(offset > 0 && level > 0) {
-          _zranges(min, offset - MAX_DIM, 0, nextLevel)
-          _zranges(min, offset - MAX_DIM, 1, nextLevel)
-          _zranges(min, offset - MAX_DIM, 2, nextLevel)
-          _zranges(min, offset - MAX_DIM, 3, nextLevel)
-          //let our children punt on each subrange
+      if (searchRange.containsInUserSpace(quadRange) || offset < 64 - precision) {
+        // whole range matches, happy day
+        mq += IndexRange(quadRange.min.z, quadRange.max.z, contained = true)
+      } else if (searchRange.overlapsInUserSpace(quadRange)) {
+        if (level < maxRecurse && offset > 0) {
+          // some portion of this range are excluded
+          // let our children work on each subrange
+          val nextOffset = offset - MAX_DIM
+          val nextLevel = level + 1
+          zranges(min, nextOffset, 0, nextLevel)
+          zranges(min, nextOffset, 1, nextLevel)
+          zranges(min, nextOffset, 2, nextLevel)
+          zranges(min, nextOffset, 3, nextLevel)
         } else {
-          mq += IndexRange(qr.min.z, qr.max.z, contained = false)
+          // bottom out - add the entire range so we don't miss anything
+          mq += IndexRange(quadRange.min.z, quadRange.max.z, contained = false)
         }
       }
     }
 
-    val offset = MAX_BITS*MAX_DIM - commonBits
-    _zranges(commonPrefix, offset, 0, maxRecurse) // the entire space
+    // kick off recursion over the narrowed space
+    zranges(commonPrefix, 64 - commonBits, 0, 0)
+
+    // return our aggregated results
     mq.toSeq
   }
 }

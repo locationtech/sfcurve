@@ -10,8 +10,6 @@ package org.locationtech.sfcurve.zorder
 
 import org.locationtech.sfcurve._
 
-import scala.util.Try
-
 /** Represents a 2D Z order curve that we will use for benchmarking purposes in the early stages.
   *
   * @param    resolution     The number of cells in each dimension of the grid space that will be indexed.
@@ -62,9 +60,6 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
   def validateY(y: Double) = math.min(math.max(ymin, y), ymax)
 
   def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[IndexRange] = {
-    import ZCurve2D.DEFAULT_MAX_RECURSION
-
-    import scala.collection.JavaConverters._
     val colMin = mapToCol(xmin)
     val rowMin = mapToRow(ymax)
     val min = Z2(colMin, rowMin)
@@ -72,15 +67,7 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     val rowMax = mapToRow(ymin)
     val max = Z2(colMax, rowMax)
 
-    val maxRecurse =
-      hints.map { h =>
-        h.asScala
-          .get(ZCurve2D.MAX_RECURSE)
-          .map { l => Try(l.asInstanceOf[Int]).getOrElse(DEFAULT_MAX_RECURSION) }
-          .getOrElse(DEFAULT_MAX_RECURSION)
-      }.getOrElse(DEFAULT_MAX_RECURSION)
-
-    Z2.zranges(min, max, maxRecurse)
+    Z2.zranges(min, max)
   }
 }
 

@@ -32,12 +32,11 @@ class Z2(val z: Long) extends AnyVal {
   def d1 = dim(1)
 
   def mid(p: Z2): Z2 = {
-    var ans: Z2  = new Z2(0)
-    if (p.z < z)
-      ans  = new Z2(p.z + (z - p.z)/2)
-    else
-      ans = new Z2(z + (p.z - z)/2)
-    ans
+    if (p.z < z) {
+      new Z2(p.z + (z - p.z) / 2)
+    } else {
+      new Z2(z + (p.z - z) / 2)
+    }
   }
 
   def bitsToString = f"(${z.toBinaryString}%16s)(${dim(0).toBinaryString}%8s,${dim(1).toBinaryString}%8s)"

@@ -124,7 +124,8 @@ object Z2 {
     val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-    val maxRecurse = if (commonBits < 30) 10 else if (commonBits < 40) 9 else 7
+    // these numbers tend to produce ~1k ranges, with a ~3k max
+    val maxRecurse = if (commonBits < 20) 12 else 11
 
     val searchRange = Z2Range(min, max)
     val mq = new MergeQueue // stores our results

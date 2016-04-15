@@ -10,6 +10,8 @@ package org.locationtech.sfcurve.zorder
 
 import org.locationtech.sfcurve._
 
+import scala.util.Try
+
 /** Represents a 2D Z order curve that we will use for benchmarking purposes in the early stages.
   *
   * @param    resolution     The number of cells in each dimension of the grid space that will be indexed.
@@ -67,7 +69,15 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     val rowMax = mapToRow(ymin)
     val max = Z2(colMax, rowMax)
 
-    Z2.zranges(min, max)
+    val maxRecurse = for {
+      hint    <- hints
+      recurse <- Option(hint.get(ZCurve2D.MAX_RECURSE))
+      asInt   <- Try(recurse.asInstanceOf[Int]).toOption
+    } yield {
+      asInt
+    }
+
+    Z2.zranges(min, max, maxRecursion = maxRecurse)
   }
 }
 

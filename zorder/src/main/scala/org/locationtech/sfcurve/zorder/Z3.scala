@@ -43,7 +43,7 @@ class Z3(val z: Long) extends AnyVal {
   def mid(p: Z3): Z3 = {
     val (x, y, z) = decode
     val (px, py, pz) = p.decode
-    Z3((x + px) / 2, (y + py) / 2, (z + pz) / 2)
+    Z3((x + px) >>> 1, (y + py) >>> 1, (z + pz) >>> 1) // overflow safe mean
   }
 
   def bitsToString = f"(${z.toBinaryString.toLong}%016d)(${d0.toBinaryString.toLong}%08d,${d1.toBinaryString.toLong}%08d,${d2.toBinaryString.toLong}%08d)"
@@ -106,6 +106,10 @@ object Z3 {
     wiped | (split(p) << dim)
   }
 
+  // base our recursion on the depth of the tree that we get 'for free' from the common prefix
+  // these numbers generally result in 500-3000 ranges being returned
+  def getMaxRecurse(commonBits: Int): Int = if (commonBits < 30) 7 else if (commonBits < 40) 6 else 5
+
   /**
    * Recurse down the oct-tree and report all z-ranges which are contained
    * in the cube defined by the min and max points
@@ -116,16 +120,16 @@ object Z3 {
    *                  considering a certain number of bits.
    * @return
    */
-  def zranges(min: Z3, max: Z3, precision: Int = 64): Seq[IndexRange] = {
+  def zranges(min: Z3, max: Z3, precision: Int = 64, maxRecursion: Option[Int] = None): Seq[IndexRange] = {
     val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
     // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-    val maxRecurse = if (commonBits < 30) 7 else if (commonBits < 40) 6 else 5
+    val maxRecurse = maxRecursion.getOrElse(getMaxRecurse(commonBits))
 
     val searchRange = Z3Range(min, max)
     var mq = new MergeQueue // stores our results
 
-    def zranges(prefix: Long, offset: Int, oct: Long, level: Int): Unit = {
+    def checkOct(prefix: Long, offset: Int, oct: Long, level: Int): Unit = {
       val min: Long = prefix | (oct << offset) // QR + 000...
       val max: Long = min | (1L << offset) - 1 // QR + 111...
       val octRange = Z3Range(new Z3(min), new Z3(max))
@@ -139,14 +143,14 @@ object Z3 {
           // let our children work on each subrange
           val nextOffset = offset - MAX_DIM
           val nextLevel = level + 1
-          zranges(min, nextOffset, 0, nextLevel)
-          zranges(min, nextOffset, 1, nextLevel)
-          zranges(min, nextOffset, 2, nextLevel)
-          zranges(min, nextOffset, 3, nextLevel)
-          zranges(min, nextOffset, 4, nextLevel)
-          zranges(min, nextOffset, 5, nextLevel)
-          zranges(min, nextOffset, 6, nextLevel)
-          zranges(min, nextOffset, 7, nextLevel)
+          checkOct(min, nextOffset, 0, nextLevel)
+          checkOct(min, nextOffset, 1, nextLevel)
+          checkOct(min, nextOffset, 2, nextLevel)
+          checkOct(min, nextOffset, 3, nextLevel)
+          checkOct(min, nextOffset, 4, nextLevel)
+          checkOct(min, nextOffset, 5, nextLevel)
+          checkOct(min, nextOffset, 6, nextLevel)
+          checkOct(min, nextOffset, 7, nextLevel)
         } else {
           // bottom out - add the entire range so we don't miss anything
           mq += IndexRange(octRange.min.z, octRange.max.z, contained = false)
@@ -155,7 +159,7 @@ object Z3 {
     }
 
     // kick off recursion over the narrowed space
-    zranges(commonPrefix, 64 - commonBits, 0, 0)
+    checkOct(commonPrefix, 64 - commonBits, 0, 0)
 
     // return our aggregated results
     mq.toSeq

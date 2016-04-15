@@ -22,9 +22,7 @@ class Z2(val z: Long) extends AnyVal {
 
   def == (other: Z2) = other.z == z
 
-  def decode: (Int, Int) = {    
-    ( combine(z), combine(z>>1) )      
-  }
+  def decode: (Int, Int) = (combine(z), combine(z>>1))
 
   def dim(i: Int) = Z2.combine(z >> i)
 
@@ -32,15 +30,13 @@ class Z2(val z: Long) extends AnyVal {
   def d1 = dim(1)
 
   def mid(p: Z2): Z2 = {
-    if (p.z < z) {
-      new Z2(p.z + (z - p.z) / 2)
-    } else {
-      new Z2(z + (p.z - z) / 2)
-    }
+    val (x, y) = decode
+    val (px, py) = p.decode
+    Z2((x + px) >>> 1, (y + py) >>> 1) // overflow safe mean
   }
 
   def bitsToString = f"(${z.toBinaryString}%16s)(${dim(0).toBinaryString}%8s,${dim(1).toBinaryString}%8s)"
-  override def toString = f"$z ${decode}"
+  override def toString = f"$z $decode"
 }
 
 object Z2 {  
@@ -109,9 +105,13 @@ object Z2 {
     ZPrefix(lower & (Long.MaxValue << bitShift), 64 - bitShift)
   }
 
+  // base our recursion on the depth of the tree that we get 'for free' from the common prefix
+  // these numbers generally result in 500-3000 ranges being returned
+  def getMaxRecurse(commonBits: Int): Int = if (commonBits < 30) 10 else if (commonBits < 40) 9 else 7
+
   /**
     * Recurse down the quad-tree and report all z-ranges which are contained
-    * in the cube defined by the min and max points
+    * in the rectangle defined by the min and max points
     *
     * @param min lower bound
     * @param max upper bound
@@ -119,16 +119,15 @@ object Z2 {
     *                  considering a certain number of bits.
     * @return
     */
-  def zranges(min: Z2, max: Z2, precision: Int = 64): Seq[IndexRange] = {
+  def zranges(min: Z2, max: Z2, precision: Int = 64, maxRecursion: Option[Int] = None): Seq[IndexRange] = {
     val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
 
-    // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-    val maxRecurse = if (commonBits < 30) 10 else if (commonBits < 40) 9 else 7
+    val maxRecurse = maxRecursion.getOrElse(getMaxRecurse(commonBits))
 
     val searchRange = Z2Range(min, max)
     val mq = new MergeQueue // stores our results
 
-    def zranges(prefix: Long, offset: Int, quad: Long, level: Int): Unit = {
+    def checkQuad(prefix: Long, offset: Int, quad: Long, level: Int): Unit = {
       val min: Long = prefix | (quad << offset) // QR + 000..
       val max: Long = min | (1L << offset) - 1  // QR + 111..
       val quadRange = Z2Range(new Z2(min), new Z2(max))
@@ -142,10 +141,10 @@ object Z2 {
           // let our children work on each subrange
           val nextOffset = offset - MAX_DIM
           val nextLevel = level + 1
-          zranges(min, nextOffset, 0, nextLevel)
-          zranges(min, nextOffset, 1, nextLevel)
-          zranges(min, nextOffset, 2, nextLevel)
-          zranges(min, nextOffset, 3, nextLevel)
+          checkQuad(min, nextOffset, 0, nextLevel)
+          checkQuad(min, nextOffset, 1, nextLevel)
+          checkQuad(min, nextOffset, 2, nextLevel)
+          checkQuad(min, nextOffset, 3, nextLevel)
         } else {
           // bottom out - add the entire range so we don't miss anything
           mq += IndexRange(quadRange.min.z, quadRange.max.z, contained = false)
@@ -154,7 +153,7 @@ object Z2 {
     }
 
     // kick off recursion over the narrowed space
-    zranges(commonPrefix, 64 - commonBits, 0, 0)
+    checkQuad(commonPrefix, 64 - commonBits, 0, 0)
 
     // return our aggregated results
     mq.toSeq

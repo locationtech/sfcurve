@@ -62,9 +62,6 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
   def validateY(y: Double) = math.min(math.max(ymin, y), ymax)
 
   def toRanges(xmin: Double, ymin: Double, xmax: Double, ymax: Double, hints: Option[RangeComputeHints] = None): Seq[IndexRange] = {
-    import ZCurve2D.DEFAULT_MAX_RECURSION
-
-    import scala.collection.JavaConverters._
     val colMin = mapToCol(xmin)
     val rowMin = mapToRow(ymax)
     val min = Z2(colMin, rowMin)
@@ -72,15 +69,15 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
     val rowMax = mapToRow(ymin)
     val max = Z2(colMax, rowMax)
 
-    val maxRecurse =
-      hints.map { h =>
-        h.asScala
-          .get(ZCurve2D.MAX_RECURSE)
-          .map { l => Try(l.asInstanceOf[Int]).getOrElse(DEFAULT_MAX_RECURSION) }
-          .getOrElse(DEFAULT_MAX_RECURSION)
-      }.getOrElse(DEFAULT_MAX_RECURSION)
+    val maxRecurse = for {
+      hint    <- hints
+      recurse <- Option(hint.get(ZCurve2D.MAX_RECURSE))
+      asInt   <- Try(recurse.asInstanceOf[Int]).toOption
+    } yield {
+      asInt
+    }
 
-    Z2.zranges(min, max, maxRecurse)
+    Z2.zranges(min, max, maxRecursion = maxRecurse)
   }
 }
 

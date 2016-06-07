@@ -77,7 +77,7 @@ class ZCurve2D(resolution: Int) extends SpaceFillingCurve2D {
       asInt
     }
 
-    Z2.zranges(min, max, maxRecursion = maxRecurse)
+    Z2.zranges(Array(ZRange(min, max)), maxRecurse = maxRecurse)
   }
 }
 

@@ -47,10 +47,10 @@ class Z2Spec extends FunSpec with Matchers {
       rmax.z should equal (102)
       p.z should equal (58)
 
-      val (litmax, bigmin) = Z2.zdivide(p, rmin, rmax)
+      val (litmax, bigmin) = Z2.zdivide(p.z, rmin.z, rmax.z)
 
-      litmax.z should equal (55)
-      bigmin.z should equal (74)
+      litmax should equal (55)
+      bigmin should equal (74)
     }
 
     it("replicates the wikipedia example") {
@@ -62,10 +62,10 @@ class Z2Spec extends FunSpec with Matchers {
       rmax.z should equal (45)
       p.z should equal (19)
 
-      val (litmax, bigmin) = Z2.zdivide(p, rmin, rmax)
+      val (litmax, bigmin) = Z2.zdivide(p.z, rmin.z, rmax.z)
 
-      litmax.z should equal (15)
-      bigmin.z should equal (36)
+      litmax should equal (15)
+      bigmin should equal (36)
     }
 
   }

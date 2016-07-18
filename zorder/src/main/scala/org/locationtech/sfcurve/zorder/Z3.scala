@@ -7,8 +7,6 @@
 *************************************************************************/
 package org.locationtech.sfcurve.zorder
 
-import org.locationtech.sfcurve.IndexRange
-
 class Z3(val z: Long) extends AnyVal {
   import Z3._
 
@@ -50,18 +48,29 @@ class Z3(val z: Long) extends AnyVal {
   override def toString = f"$z $decode"
 }
 
-object Z3 {
+object Z3 extends ZN {
 
-  final val MAX_DIM = 3
-  final val MAX_BITS = 21
-  final val MAX_MASK = 0x1fffffL
-  final val TOTAL_BITS = MAX_BITS * MAX_DIM
+  override val Dimensions = 3
+  override val BitsPerDimension = 21
+  override val TotalBits = 63
+  override val MaxMask = 0x1fffffL
 
   def apply(zvalue: Long) = new Z3(zvalue)
 
+  /**
+    * So this represents the order of the tuple, but the bits will be encoded in reverse order:
+    *   ....z1y1x1z0y0x0
+    * This is a little confusing.
+    */
+  def apply(x: Int, y:  Int, z: Int): Z3 = {
+    new Z3(split(x) | split(y) << 1 | split(z) << 2)
+  }
+
+  def unapply(z: Z3): Option[(Int, Int, Int)] = Some(z.decode)
+
   /** insert 00 between every bit in value. Only first 21 bits can be considered. */
-  def split(value: Long): Long = {
-    var x = value & MAX_MASK
+  override def split(value: Long): Long = {
+    var x = value & MaxMask
     x = (x | x << 32) & 0x1f00000000ffffL
     x = (x | x << 16) & 0x1f0000ff0000ffL
     x = (x | x << 8)  & 0x100f00f00f00f00fL
@@ -70,200 +79,27 @@ object Z3 {
   }
 
   /** combine every third bit to form a value. Maximum value is 21 bits. */
-  def combine(z: Long): Int = {
+  override def combine(z: Long): Int = {
     var x = z & 0x1249249249249249L
     x = (x ^ (x >>  2)) & 0x10c30c30c30c30c3L
     x = (x ^ (x >>  4)) & 0x100f00f00f00f00fL
     x = (x ^ (x >>  8)) & 0x1f0000ff0000ffL
     x = (x ^ (x >> 16)) & 0x1f00000000ffffL
-    x = (x ^ (x >> 32)) & MAX_MASK
+    x = (x ^ (x >> 32)) & MaxMask
     x.toInt
   }
 
-  /**
-   * So this represents the order of the tuple, but the bits will be encoded in reverse order:
-   *   ....z1y1x1z0y0x0
-   * This is a little confusing.
-   */
-  def apply(x: Int, y:  Int, z: Int): Z3 = {
-    new Z3(split(x) | split(y) << 1 | split(z) << 2)
+  override def contains(range: ZRange, value: Long): Boolean = {
+    val (x, y, z) = Z3(value).decode
+    x >= Z3(range.min).d0 && x <= Z3(range.max).d0 &&
+        y >= Z3(range.min).d1 && y <= Z3(range.max).d1 &&
+        z >= Z3(range.min).d2 && z <= Z3(range.max).d2
   }
 
-  def unapply(z: Z3): Option[(Int, Int, Int)] = Some(z.decode)
-
-  /**
-   * Returns (litmax, bigmin) for the given range and point
-   */
-  def zdivide(p: Z3, rmin: Z3, rmax: Z3): (Z3, Z3) = {
-    val (litmax, bigmin) = zdiv(load, MAX_DIM)(p.z, rmin.z, rmax.z)
-    (new Z3(litmax), new Z3(bigmin))
+  override def overlaps(range: ZRange, value: ZRange): Boolean = {
+    def overlaps(a1: Int, a2: Int, b1: Int, b2: Int) = math.max(a1, b1) <= math.min(a2, b2)
+    overlaps(Z3(range.min).d0, Z3(range.max).d0, Z3(value.min).d0, Z3(value.max).d0) &&
+        overlaps(Z3(range.min).d1, Z3(range.max).d1, Z3(value.min).d1, Z3(value.max).d1) &&
+        overlaps(Z3(range.min).d2, Z3(range.max).d2, Z3(value.min).d2, Z3(value.max).d2)
   }
-
-  /** Loads either 1000... or 0111... into starting at given bit index of a given dimension */
-  private def load(target: Long, p: Long, bits: Int, dim: Int): Long = {
-    val mask = ~(Z3.split(MAX_MASK >> (MAX_BITS-bits)) << dim)
-    val wiped = target & mask
-    wiped | (split(p) << dim)
-  }
-
-  // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-  // these numbers generally result in 500-3000 ranges being returned
-  def getMaxRecurse(commonBits: Int): Int = if (commonBits < 30) 7 else if (commonBits < 40) 6 else 5
-
-  /**
-   * Recurse down the oct-tree and report all z-ranges which are contained
-   * in the cube defined by the min and max points
-   *
-   * @param min lower bound
-   * @param max upper bound
-   * @param precision bit precision of the z-values. can be used to stop searching after
-   *                  considering a certain number of bits.
-   * @return
-   */
-  def zranges(min: Z3, max: Z3, precision: Int = 64, maxRecursion: Option[Int] = None): Seq[IndexRange] = {
-    val ZPrefix(commonPrefix, commonBits) = longestCommonPrefix(min.z, max.z)
-
-    // base our recursion on the depth of the tree that we get 'for free' from the common prefix
-    val maxRecurse = maxRecursion.getOrElse(getMaxRecurse(commonBits))
-
-    val searchRange = Z3Range(min, max)
-    var mq = new MergeQueue // stores our results
-
-    def checkOct(prefix: Long, offset: Int, oct: Long, level: Int): Unit = {
-      val min: Long = prefix | (oct << offset) // QR + 000...
-      val max: Long = min | (1L << offset) - 1 // QR + 111...
-      val octRange = Z3Range(new Z3(min), new Z3(max))
-
-      if (searchRange.containsInUserSpace(octRange) || offset < 64 - precision) {
-        // whole range matches, happy day
-        mq += IndexRange(octRange.min.z, octRange.max.z, contained = true)
-      } else if (searchRange overlapsInUserSpace octRange) {
-        if (level < maxRecurse && offset > 0) {
-          // some portion of this range is excluded
-          // let our children work on each subrange
-          val nextOffset = offset - MAX_DIM
-          val nextLevel = level + 1
-          checkOct(min, nextOffset, 0, nextLevel)
-          checkOct(min, nextOffset, 1, nextLevel)
-          checkOct(min, nextOffset, 2, nextLevel)
-          checkOct(min, nextOffset, 3, nextLevel)
-          checkOct(min, nextOffset, 4, nextLevel)
-          checkOct(min, nextOffset, 5, nextLevel)
-          checkOct(min, nextOffset, 6, nextLevel)
-          checkOct(min, nextOffset, 7, nextLevel)
-        } else {
-          // bottom out - add the entire range so we don't miss anything
-          mq += IndexRange(octRange.min.z, octRange.max.z, contained = false)
-        }
-      }
-    }
-
-    // kick off recursion over the narrowed space
-    checkOct(commonPrefix, 64 - commonBits, 0, 0)
-
-    // return our aggregated results
-    mq.toSeq
-  }
-
-  /**
-   * Calculates the longest common binary prefix between two z longs
-   *
-   * @return (common prefix, number of bits in common)
-   */
-  def longestCommonPrefix(lower: Long, upper: Long): ZPrefix = {
-    var bitShift = TOTAL_BITS - MAX_DIM
-    while ((lower >>> bitShift) == (upper >>> bitShift) && bitShift > -1) {
-      bitShift -= MAX_DIM
-    }
-    bitShift += MAX_DIM // increment back to the last valid value
-    ZPrefix(lower & (Long.MaxValue << bitShift), 64 - bitShift)
-  }
-
-  /**
-   * Implements the the algorithm defined in: Tropf paper to find:
-   * LITMAX: maximum z-index in query range smaller than current point, xd
-   * BIGMIN: minimum z-index in query range greater than current point, xd
-   *
-   * @param load: function that knows how to load bits into appropraite dimension of a z-index
-   * @param xd: z-index that is outside of the query range
-   * @param rmin: minimum z-index of the query range, inclusive
-   * @param rmax: maximum z-index of the query range, inclusive
-   * @return (LITMAX, BIGMIN)
-   */
-  def zdiv(load: (Long, Long, Int, Int) => Long, dims: Int)(xd: Long, rmin: Long, rmax: Long): (Long, Long) = {
-    require(rmin < rmax, "min ($rmin) must be less than max $(rmax)")
-    var zmin: Long = rmin
-    var zmax: Long = rmax
-    var bigmin: Long = 0L
-    var litmax: Long = 0L
-
-    def bit(x: Long, idx: Int) = {
-      ((x & (1L << idx)) >> idx).toInt
-    }
-    def over(bits: Long)  = 1L << (bits - 1)
-    def under(bits: Long) = (1L << (bits - 1)) - 1
-
-    var i = 64
-    while (i > 0) {
-      i -= 1
-
-      val bits = i/dims+1
-      val dim  = i%dims
-
-      ( bit(xd, i), bit(zmin, i), bit(zmax, i) ) match {
-        case (0, 0, 0) =>
-        // continue
-
-        case (0, 0, 1) =>
-          zmax   = load(zmax, under(bits), bits, dim)
-          bigmin = load(zmin, over(bits), bits, dim)
-
-        case (0, 1, 0) =>
-        // sys.error(s"Not possible, MIN <= MAX, (0, 1, 0)  at index $i")
-
-        case (0, 1, 1) =>
-          bigmin = zmin
-          return (litmax, bigmin)
-
-        case (1, 0, 0) =>
-          litmax = zmax
-          return (litmax, bigmin)
-
-        case (1, 0, 1) =>
-          litmax = load(zmax, under(bits), bits, dim)
-          zmin = load(zmin, over(bits), bits, dim)
-
-        case (1, 1, 0) =>
-        // sys.error(s"Not possible, MIN <= MAX, (1, 1, 0) at index $i")
-
-        case (1, 1, 1) =>
-        // continue
-      }
-    }
-    (litmax, bigmin)
-  }
-
-  /**
-   * Cuts Z-Range in two and trims based on user space, can be used to perform augmented binary search
-   *
-   * @param xd: division point
-   * @param inRange: is xd in query range
-   */
-  def cut(r: Z3Range, xd: Z3, inRange: Boolean): List[Z3Range] = {
-    if (r.min.z == r.max.z) {
-      Nil
-    } else if (inRange) {
-      if (xd.z == r.min.z)      // degenerate case, two nodes min has already been counted
-        Z3Range(r.max, r.max) :: Nil
-      else if (xd.z == r.max.z) // degenerate case, two nodes max has already been counted
-        Z3Range(r.min, r.min) :: Nil
-      else
-        Z3Range(r.min, xd - 1) :: Z3Range(xd + 1, r.max) :: Nil
-    } else {
-      val (litmax, bigmin) = Z3.zdivide(xd, r.min, r.max)
-      Z3Range(r.min, litmax) :: Z3Range(bigmin, r.max) :: Nil
-    }
-  }
-
-  case class ZPrefix(prefix: Long, precision: Int) // precision in bits
 }

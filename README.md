@@ -1,4 +1,4 @@
-SreleasesFCurve
+SFCurve
 =====
 
 [![Join the chat at https://gitter.im/locationtech/sfcurve](https://badges.gitter.im/locationtech/sfcurve.svg)](https://gitter.im/locationtech/sfcurve?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)

@@ -17,7 +17,13 @@ lazy val commonSettings = Seq(
     "-language:postfixOps",
     "-language:existentials",
     "-feature"),
-  publishTo := Some("LocationTech Nexus Repository" at "https://repo.locationtech.org/content/repositories/sfcurve-releases"),
+  publishTo <<= version { (v: String) =>
+    if (v.trim.endsWith("SNAPSHOT"))
+      Some("LocationTech Nexus Snapshot Repository" at "https://repo.locationtech.org/content/repositories/sfcurve-snapshots")
+    else
+      Some("LocationTech Nexus Repository" at "https://repo.locationtech.org/content/repositories/sfcurve-releases")
+  },
+
   credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   //publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository"))),
   publishMavenStyle := true,

@@ -69,6 +69,9 @@ lazy val hilbert: Project =
     .settings(commonSettings: _*)
     .dependsOn(api)
 
+lazy val geowaveIndex: Project =
+  Project("geowave-index", file("geowave-index"))
+    .settings(commonSettings: _*)
 
 lazy val benchmarks: Project =
   Project("benchmarks", file("benchmarks"))

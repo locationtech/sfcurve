@@ -5,5 +5,9 @@ libraryDependencies ++= Seq(
   findbugs,
   jsonLib,
   log4j12,
-  uzaygezen
+  uzaygezen,
+  junit,
+  junitIface
 )
+
+testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v")

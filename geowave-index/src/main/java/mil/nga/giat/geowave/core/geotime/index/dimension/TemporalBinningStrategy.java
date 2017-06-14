@@ -24,7 +24,6 @@ import mil.nga.giat.geowave.core.index.dimension.bin.BinValue;
 import mil.nga.giat.geowave.core.index.dimension.bin.BinningStrategy;
 import mil.nga.giat.geowave.core.index.sfc.data.NumericData;
 import mil.nga.giat.geowave.core.index.sfc.data.NumericRange;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * This class is useful for establishing a consistent binning strategy using a
@@ -181,10 +180,6 @@ public class TemporalBinningStrategy implements
 
 	}
 
-	@SuppressFBWarnings(value = {
-		"SF_SWITCH_FALLTHROUGH",
-		"SF_SWITCH_NO_DEFAULT"
-	}, justification = "Fallthrough intentional for time parsing; default case is provided")
 	protected void setToEpoch(
 			final Calendar value ) {
 		// reset appropriate values to 0 based on the unit
@@ -298,10 +293,6 @@ public class TemporalBinningStrategy implements
 		}
 	}
 
-	@SuppressFBWarnings(value = {
-		"SF_SWITCH_FALLTHROUGH",
-		"SF_SWITCH_NO_DEFAULT"
-	}, justification = "Fallthrough intentional for time parsing")
 	private Calendar getStartEpoch(
 			final byte[] binId ) {
 		final String str = StringUtils.stringFromBinary(binId);

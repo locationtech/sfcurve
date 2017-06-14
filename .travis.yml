@@ -1,0 +1,22 @@
+sudo: false
+
+language: scala
+
+addons:
+  # Fix OpenJDK builds
+  # https://github.com/travis-ci/travis-ci/issues/5227
+  hostname: localhost
+
+jdk:
+  - oraclejdk8
+
+scala:
+  - "2.11.11"
+
+cache:
+  directories:
+  - "$HOME/.ivy2"
+  - "$HOME/.sbt"
+
+script:
+  - .travis/build.sh

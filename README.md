@@ -56,6 +56,7 @@ libraryDependencies += "org.locationtech.sfcurve" %% "sfcurve-hilbert" % "<versi
 ...
 ```
 
+
 ### Working with SFCurve source
 
 The build tool used in this project is [sbt](http://www.scala-sbt.org/). A script is included that will download the necessary `sbt` software, so you do not need `sbt` installed on the machine to work with this project.

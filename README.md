@@ -19,7 +19,45 @@ A more detailed account of the origin and intention can be found in the [proposa
 
 This library is a complete work in progress, and is __NOT__ recommended for current use. In the future, though, we hope to be the definitive library for working with space filling curves on the JVM. If you have ideas on how to get us there, please participate!
 
-### Working with SFCurve
+### I want to use it anyway!
+
+If you accept the current experimental nature, here's how you include can use published SFCurve binaries in your project:
+
+#### sbt
+
+```scala
+resolvers ++= Seq(
+  "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases"
+)
+// For Z-Curves
+libraryDependencies += "org.locationtech.sfcurve" %% "sfcurve-zorder" % "<version>"
+
+// For Hilbert Curve
+libraryDependencies += "org.locationtech.sfcurve" %% "sfcurve-hilbert" % "<version>"
+```
+
+#### Maven
+
+```xml
+...
+<repository>
+    <id>locationtech-releases</id>
+    <url>https://repo.locationtech.org/content/groups/releases</url>
+    <snapshots>
+        <enabled>false</enabled>
+    </snapshots>
+</repository>
+...
+<dependency>
+    <groupId>org.locationtech.sfcurve</groupId>
+    <artifactId>sfcurve-zorder_${scala.binary.version}</artifactId>
+    <version>0.2.0</version>
+</dependency>
+...
+```
+
+
+### Working with SFCurve source
 
 The build tool used in this project is [sbt](http://www.scala-sbt.org/). A script is included that will download the necessary `sbt` software, so you do not need `sbt` installed on the machine to work with this project.
 

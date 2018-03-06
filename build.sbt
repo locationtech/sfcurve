@@ -69,8 +69,11 @@ lazy val hilbert: Project =
     .settings(commonSettings: _*)
     .dependsOn(api)
 
+lazy val geowave: Project =
+  Project("geowave", file("geowave"))
+    .settings(commonSettings: _*)
 
 lazy val benchmarks: Project =
   Project("benchmarks", file("benchmarks"))
     .settings(commonSettings: _*)
-    .dependsOn(api, zorder, hilbert)
+    .dependsOn(api, zorder, hilbert, geowave)

@@ -162,12 +162,23 @@ abstract class ZN {
 
       if (isContained(quadrantRange) || offset < 64 - precision) {
         // whole range matches, happy day
-        ranges.add(IndexRange(quadrantRange.min, quadrantRange.max, contained = true))
+        ranges.add(IndexRange(min, max, contained = true))
       } else if (isOverlapped(quadrantRange)) {
         // some portion of this range is excluded
         // queue up each sub-range for processing
         remaining.add((min, max))
       }
+    }
+
+    // bottom out and get all the ranges that partially overlapped but we didn't fully process
+    // note: this method is only called when we know there are items remaining in the queue
+    def bottomOut(): Unit = {
+      do {
+        val minMax = remaining.poll
+        if (!minMax.eq(LevelTerminator)) {
+          ranges.add(IndexRange(minMax._1, minMax._2, contained = false))
+        }
+      } while (!remaining.isEmpty)
     }
 
     // initial level - we just check the single quadrant
@@ -181,14 +192,18 @@ abstract class ZN {
     val rangeStop = maxRanges.getOrElse(Int.MaxValue)
     val recurseStop = maxRecurse.getOrElse(ZN.DefaultRecurse)
 
-    while (level < recurseStop && offset >= 0 && !remaining.isEmpty && ranges.size < rangeStop) {
+    do {
       val next = remaining.poll
       if (next.eq(LevelTerminator)) {
         // we've fully processed a level, increment our state
         if (!remaining.isEmpty) {
           level += 1
           offset -= Dimensions
-          remaining.add(LevelTerminator)
+          if (level >= recurseStop || offset < 0) {
+            bottomOut()
+          } else {
+            remaining.add(LevelTerminator)
+          }
         }
       } else {
         val prefix = next._1
@@ -197,16 +212,12 @@ abstract class ZN {
           checkValue(prefix, quadrant)
           quadrant += 1
         }
+        // subtract one from remaining.size to account for the LevelTerminator
+        if (ranges.size + remaining.size - 1 >= rangeStop) {
+          bottomOut()
+        }
       }
-    }
-
-    // bottom out and get all the ranges that partially overlapped but we didn't fully process
-    while (!remaining.isEmpty) {
-      val minMax = remaining.poll
-      if (!minMax.eq(LevelTerminator)) {
-        ranges.add(IndexRange(minMax._1, minMax._2, contained = false))
-      }
-    }
+    } while (!remaining.isEmpty)
 
     // we've got all our ranges - now reduce them down by merging overlapping values
     ranges.sort(IndexRange.IndexRangeIsOrdered)

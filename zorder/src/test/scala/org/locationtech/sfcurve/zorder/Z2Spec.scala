@@ -68,5 +68,25 @@ class Z2Spec extends FunSpec with Matchers {
       bigmin should equal (36)
     }
 
+    it("support maxRanges") {
+      val ranges = Seq(
+        ZRange(0L, 4611686018427387903L), // (sfc.index(-180, -90),      sfc.index(180, 90)),        // whole world
+        ZRange(864691128455135232L, 4323455642275676160L), // (sfc.index(35, 65),         sfc.index(45, 75)),         // 10^2 degrees
+        ZRange(4105065703422263800L, 4261005727442805282L), // (sfc.index(-90, -45),       sfc.index(90, 45)),         // half world
+        ZRange(4069591195588206970L, 4261005727442805282L), // (sfc.index(35, 55),         sfc.index(45, 75)),         // 10x20 degrees
+        ZRange(4105065703422263800L, 4202182393016524625L), // (sfc.index(35, 65),         sfc.index(37, 68)),         // 2x3 degrees
+        ZRange(4105065703422263800L, 4203729178335734358L), // (sfc.index(35, 65),         sfc.index(40, 70)),         // 5^2 degrees
+        ZRange(4097762467352558080L, 4097762468106131815L), // (sfc.index(39.999, 60.999), sfc.index(40.001, 61.001)), // small bounds
+        ZRange(4117455696967246884L, 4117458209718964953L), // (sfc.index(51.0, 51.0),     sfc.index(51.1, 51.1)),     // small bounds
+        ZRange(4117455696967246884L, 4117455697154258685L), // (sfc.index(51.0, 51.0),     sfc.index(51.001, 51.001)), // small bounds
+        ZRange(4117455696967246884L, 4117455696967246886L) // (sfc.index(51.0, 51.0),     sfc.index(51.0000001, 51.0000001)) // 60 bits in common
+      )
+
+      ranges.foreach { r =>
+        val ret = Z2.zranges(Array(r), maxRanges = Some(1000))
+        ret.length should be >= 0
+        ret.length should be <= 1000
+      }
+    }
   }
 }

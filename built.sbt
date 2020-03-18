@@ -19,9 +19,9 @@ lazy val commonSettings = Seq(
     "-feature"),
   publishTo <<= version { (v: String) =>
     if (v.trim.endsWith("SNAPSHOT"))
-      Some("LocationTech Nexus Snapshot Repository" at "https://repo.locationtech.org/content/repositories/sfcurve-snapshots")
+      Some("Eclipse Snapshot Repository" at "https://repo.eclipse.org/content/repositories/sfcurve-snapshots")
     else
-      Some("LocationTech Nexus Repository" at "https://repo.locationtech.org/content/repositories/sfcurve-releases")
+      Some("Eclipse Repository" at "https://repo.eclipse.org/content/repositories/sfcurve-releases")
   },
 
   credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),

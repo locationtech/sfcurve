@@ -11,21 +11,20 @@ lazy val commonSettings = Seq(
   scalacOptions ++= Seq(
     "-deprecation",
     "-unchecked",
-    "-Yinline-warnings",
     "-language:implicitConversions",
     "-language:reflectiveCalls",
     "-language:postfixOps",
     "-language:existentials",
     "-feature"),
-  publishTo <<= version { (v: String) =>
+  /*publishTo <<= version { (v: String) =>
     if (v.trim.endsWith("SNAPSHOT"))
       Some("Eclipse Snapshot Repository" at "https://repo.eclipse.org/content/repositories/sfcurve-snapshots")
     else
       Some("Eclipse Repository" at "https://repo.eclipse.org/content/repositories/sfcurve-releases")
-  },
+  },*/
 
   credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-  //publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository"))),
+  publishTo := Some(Resolver.file("file", new File(Path.userHome.absolutePath+"/.m2/repository"))),
   publishMavenStyle := true,
   publishArtifact in Test := false,
   pomIncludeRepository := { _ => false },

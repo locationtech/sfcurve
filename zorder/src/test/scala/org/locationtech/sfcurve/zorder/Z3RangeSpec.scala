@@ -1,8 +1,9 @@
 package org.locationtech.sfcurve.zorder
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class Z3RangeSpec extends FunSpec with Matchers {
+class Z3RangeSpec extends AnyFunSpec with Matchers  {
 
   describe("Z3Range") {
 

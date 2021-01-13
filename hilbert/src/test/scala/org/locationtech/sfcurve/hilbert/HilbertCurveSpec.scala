@@ -9,9 +9,10 @@
 package org.locationtech.sfcurve.hilbert
 
 import org.locationtech.sfcurve.SpaceFillingCurves
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class HilbertCurveSpec extends FunSpec with Matchers {
+class HilbertCurveSpec extends AnyFunSpec with Matchers  {
 
   val EPSILON: Double = 1E-3
 

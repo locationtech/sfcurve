@@ -8,10 +8,11 @@
 
 package org.locationtech.sfcurve.zorder
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
 
-class Z2Spec extends FunSpec with Matchers {
+class Z2Spec extends AnyFunSpec with Matchers {
 
   describe("Z2 encoding") {
     it("interlaces bits"){

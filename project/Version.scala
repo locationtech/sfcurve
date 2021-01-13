@@ -16,6 +16,6 @@
 
 object Version {
   val sfcurve  = "0.2.3-SNAPSHOT"
-  val scala       = "2.11.7"
-  val crossScala  = Seq("2.11.7", "2.10.6")
+  val scala       = "2.12.13"
+  val crossScala  = Seq("2.12.13", "2.11.7")
 }

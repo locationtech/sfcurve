@@ -1,9 +1,10 @@
 package org.locationtech.sfcurve.zorder
 
 import org.locationtech.sfcurve.SpaceFillingCurves
-import org.scalatest.{FunSpec, Matchers}
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class ZCurve2DSpec extends FunSpec with Matchers {
+class ZCurve2DSpec extends AnyFunSpec with Matchers {
   describe("SPI access") {
     it("provides an SFC") {
       val sfc = SpaceFillingCurves("zorder", Map(ZOrderSFCProvider.RESOLUTION_PARAM -> Int.box(100)))

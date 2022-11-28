@@ -41,7 +41,7 @@ class MergeQueue(initialSize: Int = 1) {
  
  
   /** Ensure that the internal array has at least `n` cells. */
-  protected def ensureSize(n: Int) {
+  protected def ensureSize(n: Int): Unit = {
     // Use a Long to prevent overflows
     val arrayLength: Long = array.length
     if (n > arrayLength - 1) {
@@ -53,7 +53,7 @@ class MergeQueue(initialSize: Int = 1) {
       if (newSize > Int.MaxValue) newSize = Int.MaxValue
  
       val newArray: Array[IndexRange] = new Array(newSize.toInt)
-      scala.compat.Platform.arraycopy(array, 0, newArray, 0, _size)
+      System.arraycopy(array, 0, newArray, 0, _size)
       array = newArray
     }
   }
@@ -132,9 +132,6 @@ class MergeQueue(initialSize: Int = 1) {
     }
   }
  
-  def toSeq: Seq[IndexRange] = {
-    val result = Array.ofDim[IndexRange](size)
-    System.arraycopy(array, 0, result, 0, size)
-    result
-  }
+  def toSeq: Seq[IndexRange] =
+    Seq.tabulate[IndexRange](size)(array.apply)
 }

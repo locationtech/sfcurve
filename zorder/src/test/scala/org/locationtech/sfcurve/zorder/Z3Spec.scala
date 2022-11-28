@@ -8,11 +8,10 @@
 
 package org.locationtech.sfcurve.zorder
 
-import org.scalatest._
-import org.locationtech.sfcurve.zorder._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-
-class Z3Spec extends FunSpec with Matchers {
+class Z3Spec extends AnyFunSpec with Matchers {
   describe("Z3 encoding") {
     it("interlaces bits"){
       // (x,y,z) - x has the lowest sigfig bit
